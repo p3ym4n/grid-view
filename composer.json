@@ -1,0 +1,32 @@
+{
+    "name": "p3ym4n/grid-view",
+    "type": "library",
+    "description": "grid view package for backend project",
+    "keywords": [
+        "grid view",
+        "laravel"
+    ],
+    "support": {
+        "issues": "https://github.com/p3ym4n/grid-view/issues",
+        "source": "https://github.com/p3ym4n/grid-view"
+    },
+    "license": "MIT",
+    "authors": [
+        {
+            "name": "Peyman Goldaste",
+            "email": "me@p3ym4n.com",
+            "homepage": "http://p3ym4n.com"
+        }
+    ],
+    "require": {
+        "php": ">=5.5",
+        "p3ym4n/jdate": "1.0.*",
+        "p3ym4n/laravel-asset-manager": "1.0.*"
+    },
+    "autoload": {
+        "psr-4": {
+            "p3ym4n\\GridView\\": "/"
+        }
+    },
+    "minimum-stability": "dev"
+}
