@@ -20,13 +20,12 @@
     ],
     "require": {
         "php": ">=5.5",
-        "p3ym4n/jdate": "1.0.*",
-        "p3ym4n/laravel-asset-manager": "1.0.*"
+        "p3ym4n/jdate": "1.*",
+        "p3ym4n/laravel-asset-manager": "1.*"
     },
     "autoload": {
         "psr-4": {
-            "p3ym4n\\GridView\\": "/"
+            "p3ym4n\\GridView\\": ""
         }
-    },
-    "minimum-stability": "dev"
+    }
 }
