@@ -1663,13 +1663,14 @@ class Grid {
     /**
      * Its a macro method for making bulk buttons
      *
-     * @param             $action
+     * @param string      $action
+     * @param string      $modelClass
      * @param string|null $title
      * @param string|null $tooltips
      *
      * @return array
      */
-    public static function bulk_delete($action, $title = null, $tooltips = null) {
+    public static function bulk_delete($action, $modelClass, $title = null, $tooltips = null) {
         if ($title === null) {
             $title    = icon('fa-trash-o fa-lg');
             $tooltips = trans('messages.delete');
@@ -1679,8 +1680,10 @@ class Grid {
         }
         return [
             'route'  => action($action, ['action' => 'delete']),
-            'button' => function () use ($title, $tooltips) {
-                return '<button type="submit" title="' . $tooltips . '" class="btn btn-sm btn-danger tooltips">' . $title . '</button>';
+            'button' => function () use ($modelClass, $tooltips, $title) {
+                if (Auth::user()->can('delete', new $modelClass())) {
+                    return '<button type="submit" title="' . $tooltips . '" class="btn btn-sm btn-danger tooltips">' . $title . '</button>';
+                }
             },
         ];
     }
@@ -1689,12 +1692,13 @@ class Grid {
      * Its a macro method for making bulk buttons
      *
      * @param string      $action
+     * @param string      $modelClass
      * @param string|null $title
      * @param string|null $tooltips
      *
      * @return array
      */
-    public static function bulk_change_status($action, $title = null, $tooltips = null) {
+    public static function bulk_change_status($action, $modelClass, $title = null, $tooltips = null) {
         if ($title === null) {
             $title    = icon('fa-star fa-lg');
             $tooltips = trans('messages.change status');
@@ -1704,8 +1708,10 @@ class Grid {
         }
         return [
             'route'  => action($action, ['action' => 'status']),
-            'button' => function () use ($title, $tooltips) {
-                return '<button type="submit" title="' . $tooltips . '" class="btn btn-sm btn-warning tooltips">' . $title . '</button>';
+            'button' => function () use ($modelClass, $title, $tooltips) {
+                if (Auth::user()->can('update', new $modelClass())) {
+                    return '<button type="submit" title="' . $tooltips . '" class="btn btn-sm btn-warning tooltips">' . $title . '</button>';
+                }
             },
         ];
     }
@@ -1714,12 +1720,13 @@ class Grid {
      * Its a macro method for making bulk buttons
      *
      * @param string      $action
+     * @param string      $modelClass
      * @param string|null $title
      * @param string|null $tooltips
      *
      * @return array
      */
-    public static function bulk_change_order($action, $title = null, $tooltips = null) {
+    public static function bulk_change_order($action, $modelClass, $title = null, $tooltips = null) {
         if ($title === null) {
             $title    = icon('fa-refresh fa-lg');
             $tooltips = trans('messages.change sort order');
@@ -1729,8 +1736,10 @@ class Grid {
         }
         return [
             'route'  => action($action, ['action' => 'order']),
-            'button' => function () use ($title, $tooltips) {
-                return '<button type="submit" title="' . $tooltips . '" class="btn btn-sm btn-info tooltips">' . $title . '</button>';
+            'button' => function () use ($modelClass, $title, $tooltips) {
+                if (Auth::user()->can('update', new $modelClass())) {
+                    return '<button type="submit" title="' . $tooltips . '" class="btn btn-sm btn-info tooltips">' . $title . '</button>';
+                }
             },
         ];
     }
