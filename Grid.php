@@ -4,23 +4,23 @@
  * User: p3ym4n
  * Date: 1/16/2016 AD
  * Time: 01:07
- *
- * TODO : cache kardane bazi ghesmat ha
- * TODO : gozashtane ghabeliyate update url (moshkel dar load js , css dare)
- *
+ * TODO : making the ability to update url (issue in loading js & css)
  */
 
 namespace p3ym4n\GridView;
 
+use App\Admin;
 use App\Http\Assets\ClipboardAsset;
 use App\Http\Assets\DatePickerAsset;
 use App\Http\Assets\PersianDateAsset;
 use App\Http\Assets\SelectAsset;
-use Asset;
+use App\Traits\StatusTrait;
+use Auth;
 use Exception;
+use Facades\p3ym4n\AssetManager\Asset;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Collection;
-use Morilog\Jalali\jDateTime;
+use p3ym4n\JDate\JDate;
 
 class Grid {
     
@@ -208,7 +208,6 @@ class Grid {
      * @param string $modelClass
      */
     public function __construct($modelClass) {
-        
         $this->request = request();
         $this->setUrl(url()->current());
         $this->setModel($this->instantiate($modelClass));
@@ -220,7 +219,6 @@ class Grid {
      * @return static
      */
     public static function create($modelClass) {
-        
         return new static($modelClass);
     }
     
@@ -230,7 +228,6 @@ class Grid {
      * @return Model
      */
     private function instantiate($modeClass) {
-        
         return new $modeClass();
     }
     
@@ -240,6 +237,8 @@ class Grid {
     public function relationsToLoad() {
         
         $this->eagerRelations = func_get_args();
+        
+        return $this;
     }
     
     /**
@@ -322,29 +321,21 @@ class Grid {
      * @param array $options
      *  [
      *  'attribute' => (required) the name of the model attribute ,
-     *
      *  'value'     => (optional) a callable function. like : function($model->attribute , $model) ,
-     *
      *  'title'     => (optional) the grid column title ,
-     *
      *  'filter'    => (optional) a callable function. like : function($_GET['value']))
-     *                  OR an array with this approach : [
-     *                      'type' =>   calls a method in this gridView object with this name approach :
-     *                                  $this->{filter . studly_case('type')}( $column  , $list) ,
-     *
-     *                      'list' =>   (optional) an array of arrays with ['id' => 'value']
-     *                                  signature or ['id' , ...] ,
-     *                  ],
-     *
+     *  OR an array with this approach : [
+     *  'type' =>   calls a method in this gridView object with this name approach :
+     *  $this->{filter . studly_case('type')}( $column  , $list) ,
+     *  'list' =>   (optional) an array of arrays with ['id' => 'value']
+     *  signature or ['id' , ...] ,
+     *  ],
      *  'sort'      => (optional) a boolean value to have sort arrows or not ,
-     *
      *  'search'    => (optional) a callable function for model modifying.
-     *                  like : function($model , $column , $value) ,
-     *
+     *  like : function($model , $column , $value) ,
      *  'limit'     => (optional) (int) the number of the string length to cut ,
-     *
      *  'width'     => (optional) (int) the width of the column in gird table ,
-     * ]
+     *  ]
      *
      * @return $this
      * @throws Exception
@@ -373,7 +364,6 @@ class Grid {
                 //checking for value callable and making it if not present
                 if ( ! isset($option['value'])) {
                     $option['value'] = function ($value, Model $model) {
-                        
                         return $value;
                     };
                 }
@@ -381,35 +371,27 @@ class Grid {
                 //checking for search form filter callable
                 if ( ! isset($option['filter'])) {
                     $option['filter'] = function ($value) use ($option) {
-                        
                         $placeHolder = '';
                         if (isset($option['placeholder']) && ! empty($option['placeholder'])) {
                             $placeHolder = ' placeholder="' . $option['placeholder'] . '" ';
                         }
-                        
                         return '<input type="search" class="form-control" dir="auto" name="' . $option['attribute'] . '" ' . $placeHolder . '  value="' . $value . '" >';
                     };
                     
                 } elseif ($option['filter'] == false) {
                     $option['filter'] = function ($value) use ($option) {
-                        
                         $placeHolder = '';
                         if (isset($option['placeholder']) && ! empty($option['placeholder'])) {
                             $placeHolder = ' placeholder="' . $option['placeholder'] . '" ';
                         }
-                        
                         return '<input type="search" class="form-control" dir="auto" ' . $placeHolder . '  value="' . $value . '" disabled="disabled" >';
                     };
                     
                 } elseif (is_array($option['filter'])) {
-                    
                     $method = 'filter' . studly_case($option['filter']['type']);
                     if (method_exists($this, $method)) {
-                        
                         $option['filter'] = function ($value) use ($option, $method) {
-                            
                             unset($option['filter']['type']);
-                            
                             return $this->$method($option['attribute'], $option['filter'], $value);
                         };
                         
@@ -426,25 +408,19 @@ class Grid {
                 //checking the search for model query
                 if ( ! isset($option['search'])) {
                     $option['search'] = function ($model, $column, $value) {
-                        
                         if (is_numeric($value)) {
                             return $model->where($column, $value);
                         }
-                        
                         return $model->where($column, 'like', '%' . $value . '%');
-                        
                     };
                     
                 } elseif (is_string($option['search'])) {
                     
                     $method = 'search' . studly_case($option['search']);
                     if (method_exists($this, $method)) {
-                        
                         $option['search'] = function ($model, $column, $value) use ($method) {
-                            
                             return $this->$method($model, $column, $value);
                         };
-                        
                     } else {
                         throw new Exception('"' . $method . '" method not exist in ' . __CLASS__ . ' .');
                     }
@@ -548,21 +524,17 @@ class Grid {
             $keyOption = array_merge([
                 'title'  => $title,
                 'value'  => function ($value, Model $model) {
-                    
                     if ( ! empty($this->bulks)) {
                         $value = '<input type="checkbox" value="' . $value . '" name="' . $this->key . '[]" class="check" data-table="' . $this->name . '" autocomplete="off"><br />' . $value;
                     }
-                    
                     return '<label>' . $value . '</label>';
                 },
                 'filter' => function ($value) {
-                    
                     return '<div class="form-group"><input type="number" min="1" placeholder="' . trans('grid.number') . '" class="form-control text-center" name="' . $this->key . '" value="' .
                            $value . '" ></div>';
                 },
                 'sort'   => true,
                 'search' => function ($model, $column, $value) {
-                    
                     return $model->where($column, $value);
                 },
                 'limit'  => 0,
@@ -572,7 +544,6 @@ class Grid {
             //prePend it to $this->options
             $this->options = [$this->key => $keyOption] + $this->options;
         }
-        
     }
     
     /**
@@ -621,7 +592,6 @@ class Grid {
         
         //making the link search property
         $this->linkSearch = array_replace_recursive($this->gets, $defaults);
-        
     }
     
     /**
@@ -636,11 +606,10 @@ class Grid {
         
         foreach ($this->options as $attribute => $option) {
             
+            //checking for value existence
+            $get = isset($this->gets[$attribute]) ? $this->gets[$attribute] : null;
+            
             //running the filter callback
-            $get = null;
-            if (isset($this->gets[$attribute])) {
-                $get = $this->gets[$attribute];
-            }
             $option['form'] = $option['filter']($get);
             unset($option['filter']);
             
@@ -650,7 +619,7 @@ class Grid {
             }
             unset($option['search']);
             
-            if ($option['sort']) {
+            if ($option['sort'] !== false) {
                 
                 //checking sorting
                 $up   = 'fa-angle-up';
@@ -1076,7 +1045,7 @@ class Grid {
         
         if ($this->dataCount > 0 && ! empty($this->bulks) && $this->key != false) {
             $out = [];
-            foreach ($this->bulks as $action => $bulk) {
+            foreach ($this->bulks as $bulk) {
                 $temp = '';
                 if (isset($bulk['select'])) {
                     $temp .= $bulk['select']($this);
@@ -1199,7 +1168,7 @@ class Grid {
     /**
      * make a query string of grid conditions merged with $merge
      *
-     * @param $merge
+     * @param array $merge
      *
      * @return string
      */
@@ -1230,44 +1199,29 @@ class Grid {
     }
     
     /**
-     * this is one of the filter methods that returns a html select for search
+     * This is one of the filter methods that returns a html select for search
      *
-     * @param             $name
+     * @param string      $name
      * @param array       $data
-     *
      * @param null|string $value
      *
      * @return string
      */
-    private function filterSelect($name, $data = [], $value) {
+    private function filterSelect($name, array $data = [], $value) {
         
         //add the bootstrap-select asset
         SelectAsset::add();
         
         //if it is a closure we call the function
-        $list = [];
-        if (isset($data['list'])) {
-            $list = $data['list'];
-            $list = value($list);
-        }
+        $list = isset($data['list']) ? value($data['list']) : [];
         
         //checking for any new prompts in select
-        $prompt = trans('grid.select one');
-        if (isset($data['prompt'])) {
-            $prompt = $data['prompt'];
-        }
-        
-        if ($list instanceof Collection) {
-            $empty = $list->isEmpty();
-        } else {
-            $empty = empty($list) ? true : false;
-        }
+        $prompt = isset($data['prompt']) ? $data['prompt'] : trans('grid.select one');
+        $empty  = ($list instanceof Collection) ? $list->isEmpty() : (empty($list) ? true : false);
         
         if ( ! $empty) {
-            
             $out = '<select name="' . $name . '" class="form-control" >
                         <option value="" >' . $prompt . '</option>';
-            
             foreach ($list as $key => $item) {
                 
                 $style    = '';
@@ -1287,23 +1241,14 @@ class Grid {
                         $disabled = ' disabled="disabled" ';
                         unset($item['disabled']);
                     }
-                    
                     $item = implode(' ', $item);
                 }
                 
-                $selected = '';
-                if ((string) $value == (string) $key) {
-                    $selected = ' selected="selected" ';
-                }
-                
-                $icon = '';
-                if (isset($data['icons'][$key])) {
-                    $icon = 'data-icon="' . $data['icons'][$key] . '"';
-                }
+                $selected = ((string) $value == (string) $key) ? ' selected="selected" ' : '';
+                $icon     = isset($data['icons'][$key]) ? 'data-icon="' . $data['icons'][$key] . '"' : '';
                 
                 $out .= '<option ' . $style . ' ' . $icon . ' value="' . $key . '" ' . $disabled . ' ' . $selected . ' >' . $item . '</option>';
             }
-            
             $out .= '</select>';
         } else {
             $out = '<select class="form-control" disabled="disabled" >
@@ -1317,30 +1262,24 @@ class Grid {
     /**
      * this is one of the filter methods that returns a html multiple select for search
      *
-     * @param       $name
-     * @param array $data
+     * @param string      $name
+     * @param array       $data
+     * @param string|null $value
      *
      * @return string
-     * @internal param null $list
-     *
      */
-    private function filterMultipleSelect($name, $data = []) {
+    private function filterMultipleSelect($name, array $data = [], $value) {
         
         //add the bootstrap-select asset
         SelectAsset::add();
         
         //if it is a closure we call the function
-        $list = [];
-        if (isset($data['list'])) {
-            $list = $data['list'];
-            $list = value($list);
-        }
+        $list = isset($data['list']) ? value($data['list']) : [];
         
         if ( ! empty($list)) {
             
-            $out = '<select multiple="multiple" name="' . $name . '" class="form-control" >';
-            
-            $getValue = isset($this->gets[$name]) ? explode(',', $this->gets[$name]) : [];
+            $out   = '<select multiple="multiple" name="' . $name . '" class="form-control" >';
+            $value = explode(',', $value);
             
             foreach ($list as $key => $item) {
                 
@@ -1350,28 +1289,11 @@ class Grid {
                     $item = implode(' ', $item);
                 }
                 
-                $selected = '';
-                if (in_array((string) $key, $getValue)) {
-                    $selected = ' selected="selected" ';
-                }
-                
-                $icon = '';
-                if (isset($data['icons'][$key])) {
-                    $icon = 'data-icon="' . $data['icons'][$key] . '"';
-                }
+                $selected = in_array((string) $key, $value) ? ' selected="selected" ' : '';
+                $icon     = isset($data['icons'][$key]) ? 'data-icon="' . $data['icons'][$key] . '"' : '';
                 
                 $out .= '<option ' . $icon . ' value="' . $key . '" ' . $selected . ' >' . $item . '</option>';
             }
-            
-            if ( ! empty($getValue)) {
-                
-                if (isset($data['search'])) {
-                    $this->model = $data['search']($name, $getValue, $this->model);
-                } else {
-                    $this->model = $this->model->whereIn($name, $getValue);
-                }
-            }
-            
             $out .= '</select>';
         } else {
             $out = '<select class="form-control" disabled="disabled" >
@@ -1383,71 +1305,53 @@ class Grid {
     }
     
     /**
-     * this is one of the filter methods that's return 2 inputs with datepickers
+     * This method applies the $this->filterMultipleSelect search query on $this->Model
      *
-     * @param       $name
+     * @param Model       $model
+     * @param string      $name
+     * @param string|null $value
      *
-     * @param array $data
+     * @return Model
+     */
+    private function searchMultipleSelect(Model $model, $name, $value) {
+        if ($value !== null) {
+            $model = $model->whereIn($name, $value);
+        }
+        return $model;
+    }
+    
+    /**
+     * This is one of the filter methods that's return 2 inputs with datepickers
+     *
+     * @param string      $name
+     * @param array       $data
+     * @param string|null $value
      *
      * @return string
      */
-    private function filterDatePicker($name, $data = []) {
+    private function filterDatePicker($name, array $data = [], $value) {
+        $sets = [];
+        if ($value === null) {
+            $value = [];
+        }
+        if (isset($value['s']) && $value['s'] != '') {
+            $dates = explode('-', $value['s']);
+            if ( ! isset($dates[1])) {
+                $dates[1] = '00:00:00';
+            }
+            list($year, $month, $day) = explode('/', $dates[0]);
+            list($hour, $minute, $second) = explode(':', $dates[1]);
+            $sets['s'] = [$year, $month, $day, $hour, $minute, $second];
+        }
         
-        $values = [];
-        $sets   = [];
-        if (array_key_exists($name, $this->gets)) {
-            
-            $start  = 0;
-            $end    = 0;
-            $values = $this->gets[$name];
-            if (isset($values['s']) && $values['s'] != '') {
-                
-                $dates = explode('-', $values['s']);
-                if ( ! isset($dates[1])) {
-                    $dates[1] = '00:00:00';
-                }
-                list($year, $month, $day) = explode('/', $dates[0]);
-                list($hour, $minute, $second) = explode(':', $dates[1]);
-                $start     = implode(' ', $dates);
-                $sets['s'] = [$year, $month, $day, $hour, $minute, $second];
+        if (isset($value['e']) && $value['e'] != '') {
+            $dates = explode('-', $value['e']);
+            if ( ! isset($dates[1])) {
+                $dates[1] = '00:00:00';
             }
-            
-            if (isset($values['e']) && $values['e'] != '') {
-                
-                $dates = explode('-', $values['e']);
-                if ( ! isset($dates[1])) {
-                    $dates[1] = '00:00:00';
-                }
-                list($year, $month, $day) = explode('/', $dates[0]);
-                list($hour, $minute, $second) = explode(':', $dates[1]);
-                $end       = implode(' ', $dates);
-                $sets['e'] = [$year, $month, $day, $hour, $minute, $second];
-            }
-            
-            if (isset($data['search'])) {
-                
-                $this->model = $data['search']($name, [$start, $end], $this->model);
-                
-            } else {
-                
-                if ($start != 0 && $end == 0) {
-                    
-                    $this->model = $this->model->where($name, '>=', jDateTime::createCarbonFromFormat(FORMAT_FULL_DATE, $start));
-                    
-                } elseif ($start == 0 && $end != 0) {
-                    
-                    $this->model = $this->model->where($name, '<', jDateTime::createCarbonFromFormat(FORMAT_FULL_DATE, $end));
-                    
-                } elseif ($start != 0 && $end != 0) {
-                    
-                    $this->model = $this->model->whereBetween($name, [
-                        jDateTime::createCarbonFromFormat(FORMAT_FULL_DATE, $start),
-                        jDateTime::createCarbonFromFormat(FORMAT_FULL_DATE, $end),
-                    ]);
-                    
-                }
-            }
-            
+            list($year, $month, $day) = explode('/', $dates[0]);
+            list($hour, $minute, $second) = explode(':', $dates[1]);
+            $sets['e'] = [$year, $month, $day, $hour, $minute, $second];
         }
         
         PersianDateAsset::add();
@@ -1485,22 +1389,73 @@ class Grid {
             });
         ");
         
-        $out = '<input dir="ltr" type="text" name="' . $name . '[s]"  ' .
-               (isset($values['s']) ? 'value="' . $values['s'] . '" data-value="' . json_encode($sets['s'], JSON_NUMERIC_CHECK) . '" ' : '') . ' class="form-control gridDatePicker text-center pull-right" style="width:49%" placeholder="از" >
-                <input dir="ltr" type="text" name="' . $name . '[e]" ' . (isset($values['e']) ? 'value="' . $values['e'] . '" data-value="' . json_encode($sets['e'], JSON_NUMERIC_CHECK) . '" ' : '') .
+        return '<input dir="ltr" type="text" name="' . $name . '[s]"  ' .
+               (isset($value['s']) ? 'value="' . $value['s'] . '" data-value="' . json_encode($sets['s'], JSON_NUMERIC_CHECK) . '" ' : '') .
+               ' class="form-control gridDatePicker text-center pull-right" style="width:49%" placeholder="از" >
+                <input dir="ltr" type="text" name="' . $name . '[e]" ' .
+               (isset($value['e']) ? 'value="' . $value['e'] . '" data-value="' . json_encode($sets['e'], JSON_NUMERIC_CHECK) . '" ' : '') .
                ' class="form-control gridDatePicker text-center pull-left" style="width:49%" placeholder="تا" >';
-        
-        return $out;
     }
     
     /**
-     * @param string $column
-     * @param null   $title
+     * This method applies the $this->filterDatePicker search query on $this->Model
+     *
+     * @param Model       $model
+     * @param string      $name
+     * @param string|null $value
+     *
+     * @return Model
+     */
+    private function searchDatePicker(Model $model, $name, $value) {
+        if ($value !== null) {
+            $start = null;
+            $end   = null;
+            
+            if (isset($value['s']) && $value['s'] != '') {
+                $dates = explode('-', $value['s']);
+                if ( ! isset($dates[1])) {
+                    $dates[1] = '00:00:00';
+                }
+                $start = implode(' ', $dates);
+            }
+            
+            if (isset($value['e']) && $value['e'] != '') {
+                $dates = explode('-', $value['e']);
+                if ( ! isset($dates[1])) {
+                    $dates[1] = '00:00:00';
+                }
+                $end = implode(' ', $dates);
+            }
+            
+            if ($start !== null && $end === null) {
+                $model = $model->where(
+                    $name,
+                    '>=',
+                    JDate::createFromFormat(FORMAT_FULL_DATE, $start)->carbon);
+            } elseif ($start === null && $end !== null) {
+                $model = $model->where(
+                    $name,
+                    '<',
+                    JDate::createFromFormat(FORMAT_FULL_DATE, $end)->carbon
+                );
+            } elseif ($start !== null && $end !== null) {
+                $model = $model->whereBetween($name, [
+                    JDate::createFromFormat(FORMAT_FULL_DATE, $start)->carbon,
+                    JDate::createFromFormat(FORMAT_FULL_DATE, $end)->carbon,
+                ]);
+            }
+        }
+        return $model;
+    }
+    
+    /**
+     * @param string      $column
+     * @param string|null $title
+     * @param string      $username
      *
      * @return array
      */
-    public static function column_admin($column = 'admin_id', $title = null) {
-        
+    public static function column_admin($column = 'admin_id', $title = null, $username = 'username') {
         if (is_null($title)) {
             $title = trans('validation.attributes.' . $column);
         }
@@ -1509,10 +1464,9 @@ class Grid {
             'title'     => $title,
             'filter'    => [
                 'type' => 'select',
-                'list' => \App\Admin::all()->pluck('full_name', 'id'),
+                'list' => Admin::all()->pluck($username, 'id'),
             ],
-            'value'     => function ($attribute_value, $model) {
-                
+            'value'     => function ($value, $model) {
                 if ( ! is_null($model->admin)) {
                     return link_to_action('Admin\BulkController@index', $model->admin->full_name, ['id' => $model->admin->id], [
                         'class'       => 'load btn btn-link',
@@ -1522,11 +1476,10 @@ class Grid {
             },
         ];
         
-        if ( ! \Auth::user()->is_main) {
+        if ( ! Auth::user()->is_main) {
             unset($out['filter']);
             $out['search'] = false;
-            $out['value']  = function ($attribute_value, $model) {
-                
+            $out['value']  = function ($value, $model) {
                 if ($model->admin) {
                     return $model->admin->username;
                 }
@@ -1537,71 +1490,67 @@ class Grid {
     }
     
     /**
-     * @param      $column
-     * @param null $title
+     * @param string      $column
+     * @param string|null $title
      *
      * @return array
      */
     public static function column_date($column, $title = null) {
-        
         if (is_null($title)) {
             $title = trans('validation.attributes.' . $column);
         }
-        
         return [
             'attribute' => $column,
             'title'     => $title,
             'filter'    => [
                 'type' => 'datePicker',
             ],
+            'search'    => 'datePicker',
             'value'     => function ($value) {
-                
-                return smartTime($value);
+                if ($value === null) {
+                    return trans('words.never');
+                } else {
+                    return JDate::createFromCarbon($value)->smart();
+                }
             },
         ];
     }
     
     /**
-     * @param null $title
+     * @param string|null $title
      *
      * @return array
      */
     public static function column_created_at($title = null) {
-        
         return static::column_date('created_at', $title);
     }
     
     /**
-     * @param null $title
+     * @param string|null $title
      *
      * @return array
      */
     public static function column_updated_at($title = null) {
-        
         return static::column_date('updated_at', $title);
     }
     
     /**
-     * @param null $model
-     * @param null $title
+     * @param string|null $model
+     * @param string|null $title
      *
      * @return array
      */
     public static function column_status($model = null, $title = null) {
-        
         if (is_null($model)) {
-            $model = \p3ym4n\Model\StatusTrait::class;
+            $model = StatusTrait::class;
         }
-        
         if (is_null($title)) {
             $title = trans('validation.attributes.status');
         }
-        
         return [
             'attribute' => 'status',
             'title'     => $title,
             'value'     => function ($value) use ($model) {
-                
                 return $model::getStatusIcon($value);
             },
             'filter'    => [
@@ -1610,38 +1559,30 @@ class Grid {
                 'icons' => $model::getStatusList('icon'),
             ],
         ];
-        
     }
     
     /**
-     * @param string $column
-     * @param null   $title
+     * @param string      $column
+     * @param string|null $title
      *
      * @return array
      */
     public static function column_order($column = 'order', $title = null) {
-        
         if (is_null($title)) {
             $title = trans('validation.attributes.' . $column);
         }
-        
         return [
             'attribute' => $column,
             'title'     => $title,
             'value'     => function ($value, $model) use ($column) {
-                
-                return \Form::number($column . '[' . $model->id . ']', $value, [
-                    'dir'   => 'ltr',
-                    'min'   => 0,
-                    'class' => 'form-control grid-order',
-                ]);
+                return '<input type="number" dir="ltr" min="0" class="form-control grid-order" name="' . $column . '[' . $model->id . ']' . '" value="' . $value . '">';
             },
         ];
     }
     
     /**
-     * @param string $column
-     * @param null   $title
+     * @param string      $column
+     * @param string|null $title
      *
      * @return array
      */
@@ -1650,53 +1591,34 @@ class Grid {
         if (is_null($title)) {
             $title = trans('validation.attributes.' . $column);
         }
-        
         return [
             'attribute' => $column,
             'title'     => $title,
             'filter'    => false,
             'sort'      => false,
             'value'     => function ($value, $model) use ($column) {
-                
                 if ( ! empty($value)) {
-                    
-                    $text = $column;
-                    if (isset($model->title)) {
-                        $text = $model->title;
-                    }
-                    
-                    return html_to_action(
-                        'Library\PreviewController@preview',
-                        \Html::image(
-                            config('filesystems.disks.local.url') . $value,
-                            $text,
-                            ['style' => 'max-height: 70px;']
-                        ),
-                        [
-                            'storage' => 'public',
-                            'file'    => $value,
-                            'static'  => true,
-                        ],
-                        [
-                            'class'       => 'ajax',
-                            'data-holder' => '#inWrapper',
-                            'data-method' => 'get',
-                        ]
-                    );
+                    $text   = isset($model->title) ? $model->title : $column;
+                    $action = action('Library\PreviewController@preview', [
+                        'storage' => 'public',
+                        'file'    => $value,
+                        'static'  => true,
+                    ]);
+                    return '<a href="' . $action . '" class="ajax" data-holder="#inWrapper" data-method="get" >
+                                <img src="' . config('filesystems.disks.public.url') . $value . '" alt="' . $text . '" style="max-height: 70px;" >
+                            </a>';
                 }
             },
         ];
     }
     
     /**
-     * @param string $column
-     *
-     * @param null   $title
+     * @param string      $column
+     * @param string|null $title
      *
      * @return array
      */
     public static function column_link($column = 'link', $title = null) {
-        
         ClipboardAsset::add();
         Asset::addScript("
 			//clipboard
@@ -1726,19 +1648,142 @@ class Grid {
 				margin-bottom: 0px;
 			}
 		");
-        
         if (is_null($title)) {
             $title = trans('validation.attributes.' . $column);
         }
-        
         return [
             'attribute' => $column,
             'title'     => $title,
-            'value'     => function ($value, $model) {
-                
+            'value'     => function ($value) {
                 return "<span data-clipboard-text='{$value}' onclick='return false;' title='برای کپی کلیک کنید.' class='tooltips link-copy btn btn-default'>{$value}</span>";
             },
         ];
     }
     
+    /**
+     * Its a macro method for making bulk buttons
+     *
+     * @param             $action
+     * @param string|null $title
+     * @param string|null $tooltips
+     *
+     * @return array
+     */
+    public static function bulk_delete($action, $title = null, $tooltips = null) {
+        if ($title === null) {
+            $title    = icon('fa-trash-o fa-lg');
+            $tooltips = trans('messages.delete');
+        }
+        if ($tooltips === null) {
+            $tooltips = trans('messages.delete');
+        }
+        return [
+            'route'  => action($action, ['action' => 'delete']),
+            'button' => function () use ($title, $tooltips) {
+                return '<button type="submit" title="' . $tooltips . '" class="btn btn-sm btn-danger tooltips">' . $title . '</button>';
+            },
+        ];
+    }
+    
+    /**
+     * Its a macro method for making bulk buttons
+     *
+     * @param string      $action
+     * @param string|null $title
+     * @param string|null $tooltips
+     *
+     * @return array
+     */
+    public static function bulk_change_status($action, $title = null, $tooltips = null) {
+        if ($title === null) {
+            $title    = icon('fa-star fa-lg');
+            $tooltips = trans('messages.change status');
+        }
+        if ($tooltips === null) {
+            $tooltips = trans('messages.change status');
+        }
+        return [
+            'route'  => action($action, ['action' => 'status']),
+            'button' => function () use ($title, $tooltips) {
+                return '<button type="submit" title="' . $tooltips . '" class="btn btn-sm btn-warning tooltips">' . $title . '</button>';
+            },
+        ];
+    }
+    
+    /**
+     * Its a macro method for making bulk buttons
+     *
+     * @param string      $action
+     * @param string|null $title
+     * @param string|null $tooltips
+     *
+     * @return array
+     */
+    public static function bulk_change_order($action, $title = null, $tooltips = null) {
+        if ($title === null) {
+            $title    = icon('fa-refresh fa-lg');
+            $tooltips = trans('messages.change sort order');
+        }
+        if ($tooltips === null) {
+            $tooltips = trans('messages.change sort order');
+        }
+        return [
+            'route'  => action($action, ['action' => 'order']),
+            'button' => function () use ($title, $tooltips) {
+                return '<button type="submit" title="' . $tooltips . '" class="btn btn-sm btn-info tooltips">' . $title . '</button>';
+            },
+        ];
+    }
+    
+    /**
+     * Its a macro method for making tools buttons
+     *
+     * @param string      $action
+     * @param string|null $title
+     * @param string|null $tooltips
+     *
+     * @return \Closure
+     */
+    public static function tool_edit($action, $title = null, $tooltips = null) {
+        if ($title === null) {
+            $title    = icon('fa-pencil-square-o');
+            $tooltips = trans('messages.edit');
+        }
+        if ($tooltips === null) {
+            $tooltips = trans('messages.edit');
+        }
+        return function (Model $record) use ($action, $title, $tooltips) {
+            if (Auth::user()->can('update', $record)) {
+                return '<a href="' . action($action, ['id' => $record->id]) . '" class="load btn btn-info tooltips" title="' . $tooltips . '" >' . $title . '</a>';
+            }
+        };
+        
+    }
+    
+    /**
+     * Its a macro method for making tools buttons
+     *
+     * @param string      $action
+     * @param string|null $title
+     * @param string|null $tooltips
+     *
+     * @return \Closure
+     */
+    public static function tool_delete($action, $title = null, $tooltips = null) {
+        if ($title === null) {
+            $title    = icon('fa-trash-o');
+            $tooltips = trans('messages.delete');
+        }
+        if ($tooltips === null) {
+            $tooltips = trans('messages.delete');
+        }
+        return function (Model $record) use ($action, $title, $tooltips) {
+            if (Auth::user()->can('delete', $record)) {
+                return '<a href="' . action($action, ['id' => $record->id, '_method' => 'delete']) . '" class="ajax btn btn-danger tooltips" data-holder="#inWrapper" title="' . $tooltips . '" >' .
+                       $title .
+                       '</a>';
+            }
+        };
+        
+    }
 }
