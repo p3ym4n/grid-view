@@ -1466,9 +1466,9 @@ class Grid {
                 'type' => 'select',
                 'list' => Admin::all()->pluck($username, 'id'),
             ],
-            'value'     => function ($value, $model) {
+            'value'     => function ($value, $model) use ($username) {
                 if ( ! is_null($model->admin)) {
-                    return link_to_action('Admin\BulkController@index', $model->admin->full_name, ['id' => $model->admin->id], [
+                    return link_to_action('Admin\BulkController@index', $model->admin->{$username}, ['id' => $model->admin->id], [
                         'class'       => 'load btn btn-link',
                         'data-holder' => '#inWrapper',
                     ]);
@@ -1605,7 +1605,7 @@ class Grid {
                         'static'  => true,
                     ]);
                     return '<a href="' . $action . '" class="ajax" data-holder="#inWrapper" data-method="get" >
-                                <img src="' . config('filesystems.disks.public.url') . $value . '" alt="' . $text . '" style="max-height: 70px;" >
+                                <img src="' . config('filesystems.disks.local.url') . $value . '" alt="' . $text . '" style="max-height: 70px;" >
                             </a>';
                 }
             },
