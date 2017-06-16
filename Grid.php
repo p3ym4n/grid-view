@@ -952,19 +952,8 @@ class Grid {
 							
 						},
 						error : function(data){
-							var out = data.responseText;
-							if(data.responseJSON !== undefined){
-								out = '<div class=\"alert alert-danger\"><p>خطاهای زیر رخ داد :‌</p><br/><ul>';
-								var obj = data.responseJSON;
-								for (var key in obj) {
-								  if (obj.hasOwnProperty(key)) {
-								     out += '<li>' + obj[key] + '</li>' ;
-								  }
-								}
-								out += '</ul></div>';
-							}
 							$('.tooltip , .popover').remove();
-							{$this->topDiv}Holder.spin(false).prepend(out);
+							{$this->topDiv}Holder.spin(false).prepend(showMessage(data));
 							scrollTop({$this->topDiv}Holder);
 						}
 					});
