@@ -1324,21 +1324,21 @@ class Grid {
             $value = [];
         }
         if (isset($value['s']) && $value['s'] != '') {
-            $dates = explode('-', $value['s']);
+            $dates = explode('_', $value['s']);
             if ( ! isset($dates[1])) {
                 $dates[1] = '00:00:00';
             }
-            list($year, $month, $day) = explode('/', $dates[0]);
+            list($year, $month, $day) = explode('-', $dates[0]);
             list($hour, $minute, $second) = explode(':', $dates[1]);
             $sets['s'] = [$year, $month, $day, $hour, $minute, $second];
         }
         
         if (isset($value['e']) && $value['e'] != '') {
-            $dates = explode('-', $value['e']);
+            $dates = explode('_', $value['e']);
             if ( ! isset($dates[1])) {
                 $dates[1] = '00:00:00';
             }
-            list($year, $month, $day) = explode('/', $dates[0]);
+            list($year, $month, $day) = explode('-', $dates[0]);
             list($hour, $minute, $second) = explode(':', $dates[1]);
             $sets['e'] = [$year, $month, $day, $hour, $minute, $second];
         }
@@ -1362,7 +1362,7 @@ class Grid {
                     formatter: function (unixDate) {
                         var pdate = new persianDate(unixDate);
                         pdate.formatPersian = false;
-                        return pdate.format('YYYY/MM/DD-HH:mm:ss');
+                        return pdate.format('YYYY-MM-DD_HH:mm:ss');
                     },
                     toolbox: {
                         text: {
@@ -1401,7 +1401,7 @@ class Grid {
             $end   = null;
             
             if (isset($value['s']) && $value['s'] != '') {
-                $dates = explode('-', $value['s']);
+                $dates = explode('_', $value['s']);
                 if ( ! isset($dates[1])) {
                     $dates[1] = '00:00:00';
                 }
@@ -1409,7 +1409,7 @@ class Grid {
             }
             
             if (isset($value['e']) && $value['e'] != '') {
-                $dates = explode('-', $value['e']);
+                $dates = explode('_', $value['e']);
                 if ( ! isset($dates[1])) {
                     $dates[1] = '00:00:00';
                 }
