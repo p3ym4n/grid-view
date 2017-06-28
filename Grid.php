@@ -720,6 +720,7 @@ class Grid {
                 font-size: 13px;
                 width: auto;
                 max-width: 300px!important;
+                min-width: 50px!important;
             }
             .table-grid th .checkbox{
                 margin-bottom: 7px;
@@ -1594,7 +1595,7 @@ class Grid {
                         'static'  => true,
                     ]);
                     return '<a href="' . $action . '" class="ajax" data-holder="#inWrapper" data-method="get" >
-                                <img src="' . config('filesystems.disks.local.url') . $value . '" alt="' . $text . '" style="max-height: 70px;" >
+                                <img src="' . config('filesystems.disks.local.url') . $value . '" alt="' . $text . '" style="max-height: 70px;max-width: 140px;" >
                             </a>';
                 }
             },
